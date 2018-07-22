@@ -1,0 +1,9 @@
+{
+  "name": "gena-cli",
+  "version": "0.0.1",
+  "dependencies": {
+    "@types/minimist": "^1.2.0",
+    "@types/node": "^10.1.2",
+    "minimist": "^1.2.0"
+  }
+}

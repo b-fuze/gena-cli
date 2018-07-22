@@ -1,3 +1,3 @@
 # gena-cli
 
-Awesome GEN-A CLI client for the ANV daemon
+WIP as client ANV client API stabilizes
