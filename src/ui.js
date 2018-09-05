@@ -82,6 +82,7 @@ class UI {
                         "Random ilk",
                         "XKCD was here",
                         "Lies",
+                        "The retired fable of old, since yonder times...",
                     ];
                     state.tasks.push({
                         list: [

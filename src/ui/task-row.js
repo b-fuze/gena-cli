@@ -9,12 +9,13 @@ const turbocolor_1 = __importDefault(require("turbocolor"));
 const jshorts_1 = require("jshorts");
 function taskRow(id, name, progress, cols, isHeader) {
     const progressWidth = Math.floor(cols / 2);
-    const progressConsumed = isHeader ? 0 : Math.floor(Math.max(Math.min(progress / 100, 1), 0) * (progressWidth - 10));
+    const progressActualWidth = progressWidth - 2;
+    const progressConsumed = isHeader ? 0 : Math.round(Math.max(Math.min(progress / 100, 1), 0) * progressActualWidth);
     const progressDisplay = isHeader
         ? turbocolor_1.default.bold("PROGRESS")
         : turbocolor_1.default.bold("[")
             + jshorts_1.jSh.nChars(turbocolor_1.default.blue("■"), progressConsumed)
-            + jshorts_1.jSh.nChars(turbocolor_1.default.black("■"), (progressWidth - 10) - progressConsumed)
+            + jshorts_1.jSh.nChars(turbocolor_1.default.black("■"), progressActualWidth - progressConsumed)
             + turbocolor_1.default.bold("]");
     return pane_1.pane([
         pane_1.pane(term_utils_1.rightAlign(isHeader ? turbocolor_1.default.bold(id) : id, true), 3, 1),

@@ -11,7 +11,7 @@ function footer(state, cols) {
         turbocolor_1.default.green("┗" + term_utils_1.strFill("━", cols - 2) + "┛"),
         "Build (panes): " + turbocolor_1.default.bold("" + state.lastPaneBuildDuration + "ms")
             + " Render: " + turbocolor_1.default.bold("" + state.lastPaintDuration + "ms")
-            + term_utils_1.rightAlign(turbocolor_1.default.dim.white("" + state.lastKey)),
+            + term_utils_1.rightAlign(turbocolor_1.default.dim.white(" " + state.lastKey), true),
     ], cols, 2);
 }
 exports.footer = footer;
