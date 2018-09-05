@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "keyofStringsOnly": true,
+    "allowJs": false,
+    "checkJs": false,
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "target": "es6",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": false,
+    "baseUrl": ".",
+    "paths": {
+      "*": [
+        "node_modules/*",
+        "src/node_modules/*"
+      ]
+    }
+  },
+  "include": [
+    "./src/*",
+    "src/node_modules/term-utils/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

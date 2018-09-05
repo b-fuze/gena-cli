@@ -1,0 +1,3 @@
+[submodule "src/anv"]
+	path = src/anv
+	url = git@gitlab.com:anv-d/anv-core.git
