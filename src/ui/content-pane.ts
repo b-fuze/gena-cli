@@ -3,16 +3,17 @@ import {strFill} from "term-utils";
 import {State} from "../state";
 import {pane} from "./pane";
 import {scroll} from "./scrollable";
+import {taskRow} from "./task-row";
 
 export function content(state: State) {
   return pane((cols, rows) => {
-    // return [
-    //   tc.green(strFill("━", cols)),
-    //   tc.red(" Content") + " hurr durr",
-    // ].concat(new Array(rows - 2).fill("~"));
-
-    const items = state.tasks.map((t, i) => `TASK - ${ (i++) } - ` + tc.red("" + t.id));
-    return scroll(state, items, cols, rows);
+    const items = state.tasks.map((t, i) => pane((cols) => taskRow(t.id + "", tc.green(t.title), t.currentDl, cols, false), 0, 1));
+    return scroll(state, pane((cols, rows) => taskRow(
+      "#",
+      "TASK",
+      0,
+      cols,
+      true,
+    ), 0, 1), items, cols, rows);
   }, 0, 0, "v");
-
 }

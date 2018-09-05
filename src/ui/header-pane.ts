@@ -7,7 +7,7 @@ const headerContent: {
   [state: string]: ((state: State) => string)
 } = {
   main(state: State) {
-    return strMultiply(" ", 8) + `${ tc.bold("" + state.activeMedia) } active media of ${ tc.bold("" + state.tasks.length) } tasks `;
+    return strMultiply(" ", 8) + `${ tc.bold("" + state.activeMedia) } active media of ${ tc.bold("" + state.tasks.length) } tasks`;
   }
 };
 

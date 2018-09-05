@@ -46,6 +46,7 @@ exports.state = {
     tasks: [],
     lastKey: 0,
     lastPaintDuration: 0,
+    lastPaneBuildDuration: 0,
     // Computed
     activeMedia: 0,
     // View reference

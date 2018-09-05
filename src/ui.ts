@@ -43,19 +43,25 @@ class UI {
     const cols = this.stdout.columns;
     const rows = this.stdout.rows;
 
+    // Build panes
+    const tp = performance.now();
+    const panes = window(state, cols, rows);
+    const tp2 = performance.now();
+
     // Paint new screen onto buffer (before clearing to prevent flickering)
-    const t = performance.now();
-    const newBuffer = render(window(state, cols, rows), cols, rows).join("\n");
-    const t2 = performance.now();
+    const tr = performance.now();
+    const newBuffer = render(panes, cols, rows).join("\n");
+    const tr2 = performance.now();
 
     // Reset screen
-    this.stdout.write(clearScreen + positionCursor(1, 1));
+    this.stdout.write(positionCursor(1, 1));
 
     // Write new screen
     this.stdout.write(newBuffer);
 
     // Save paint performance
-    state.lastPaintDuration = Math.floor((t2 - t) * 100) / 100;
+    state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
+    state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
   }
 
   update(state: State, input: number | string, fullInput: string) {
@@ -82,6 +88,16 @@ class UI {
       // Regular character
       switch (input) {
         case 32: // Space key
+          const titles = [
+            "Late Night Thing",
+            "Egyptian Muses",
+            "Memes from long ago...",
+            "Recursive Title(self)",
+            "Random ilk",
+            "XKCD was here",
+            "Lies",
+          ];
+
           state.tasks.push(<any> {
             list: [
               {status: MediaStatus.ACTIVE},
@@ -90,7 +106,9 @@ class UI {
               {status: MediaStatus.ACTIVE},
               {status: MediaStatus.ACTIVE},
             ],
-            id: Math.round(Math.random() * 100000),
+            id: state.tasks.length + 1,
+            currentDl: Math.round(Math.random() * 100),
+            title: titles[Math.round(Math.random() * (titles.length - 1))],
           });
           break;
         case 45: // Minus/dash key
