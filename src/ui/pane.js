@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-function pane(contents, cols = 0, rows = 0, dir = "v") {
+function pane(contents, cols = 0, rows = 0, dir = "v", fill = false, post) {
     let paneContent = contents;
     // Wrap in array if it's raw content and unwrapped
     if (typeof contents !== "function" && !Array.isArray(contents)) {
@@ -11,6 +11,8 @@ function pane(contents, cols = 0, rows = 0, dir = "v") {
         cols,
         rows,
         dir,
+        fill,
+        post,
     };
 }
 exports.pane = pane;

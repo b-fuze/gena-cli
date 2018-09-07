@@ -49,6 +49,7 @@ export const state = {
   lastKey: <number | string> 0,
 
   lastPaintDuration: 0,
+  lastPaneBuildDuration: 0,
 
   // Computed
   activeMedia: 0,

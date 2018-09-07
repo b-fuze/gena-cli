@@ -9,7 +9,9 @@ const pane_1 = require("./pane");
 function footer(state, cols) {
     return pane_1.pane([
         turbocolor_1.default.green("┗" + term_utils_1.strFill("━", cols - 2) + "┛"),
-        "Last render: " + turbocolor_1.default.bold("" + state.lastPaintDuration + "ms") + term_utils_1.rightAlign(turbocolor_1.default.dim.white("" + state.lastKey)),
+        "Build (panes): " + turbocolor_1.default.bold("" + state.lastPaneBuildDuration + "ms")
+            + " Render: " + turbocolor_1.default.bold("" + state.lastPaintDuration + "ms")
+            + term_utils_1.rightAlign(turbocolor_1.default.dim.white(" " + state.lastKey), true),
     ], cols, 2);
 }
 exports.footer = footer;

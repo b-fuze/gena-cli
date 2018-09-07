@@ -8,7 +8,7 @@ const pane_1 = require("./pane");
 const turbocolor_1 = __importDefault(require("turbocolor"));
 const headerContent = {
     main(state) {
-        return term_utils_1.strMultiply(" ", 8) + `${turbocolor_1.default.bold("" + state.activeMedia)} active media of ${turbocolor_1.default.bold("" + state.tasks.length)} tasks `;
+        return term_utils_1.strMultiply(" ", 8) + `${turbocolor_1.default.bold("" + state.activeMedia)} active media of ${turbocolor_1.default.bold("" + state.tasks.length)} tasks`;
     }
 };
 function header(state, cols, rows) {

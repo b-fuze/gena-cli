@@ -6,13 +6,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const pane_1 = require("./pane");
 const turbocolor_1 = __importDefault(require("turbocolor"));
 const jshorts_1 = require("jshorts");
-function scroll(state, items, cols, rows) {
+function scroll(state, header, items, cols, rows) {
     const scrollMax = Math.max(items.length - rows, 0);
     const scrollDistance = Math.min(state.scroll, scrollMax);
+    const headerUnoccupiedSpace = Math.max(rows - Number(!!header), 0);
     return pane_1.pane([
-        scrollview(scrollDistance, items, cols - state.scrollbarWidth, rows),
-        scrollbar(state, scrollDistance, scrollMax, items.length, rows),
-    ], cols, rows, "h");
+        header
+            ? pane_1.pane([
+                turbocolor_1.default.green("┃"),
+                pane_1.pane(header, cols - 2, 1),
+                turbocolor_1.default.green("┃"),
+            ], cols, 1, "h")
+            : null,
+        pane_1.pane([
+            scrollview(scrollDistance, items, cols - state.scrollbarWidth, headerUnoccupiedSpace),
+            scrollbar(state, scrollDistance, scrollMax, items.length, headerUnoccupiedSpace),
+        ], 0, 0, "h"),
+    ], cols, rows, "v");
 }
 exports.scroll = scroll;
 function scrollview(scrollDistance, items, cols, rows) {
@@ -29,8 +39,8 @@ function scrollbar(state, scrollDistance, scrollMax, itemCount, rows) {
     const sbPos = scrollMax
         ? Math.round((scrollDistance / scrollMax) * sbPosMax)
         : 0;
-    const scrollbarRow = turbocolor_1.default.bgGreen(jshorts_1.jSh.nChars(" ", state.scrollbarWidth));
-    const scrollbarTroughRow = turbocolor_1.default.bgBlack(jshorts_1.jSh.nChars(" ", state.scrollbarWidth));
+    const scrollbarRow = turbocolor_1.default.red(jshorts_1.jSh.nChars("┃", state.scrollbarWidth));
+    const scrollbarTroughRow = turbocolor_1.default.gray(jshorts_1.jSh.nChars("┃", state.scrollbarWidth));
     const trough = Array(rows).fill(scrollbarTroughRow);
     // Draw scrollbar
     for (let i = 0; i < sbHeight; i++) {

@@ -6,6 +6,8 @@ import {pane} from "./pane";
 export function footer(state: State, cols: number) {
   return pane([
     tc.green("┗" + strFill("━", cols - 2) + "┛"),
-    "Last render: " + tc.bold("" + state.lastPaintDuration + "ms") + rightAlign(tc.dim.white("" + state.lastKey)),
+    "Build (panes): " + tc.bold("" + state.lastPaneBuildDuration + "ms")
+    + " Render: " + tc.bold("" + state.lastPaintDuration + "ms")
+    + rightAlign(tc.dim.white(" " + state.lastKey), true),
   ], cols, 2);
 }

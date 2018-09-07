@@ -5,14 +5,24 @@ import {jSh} from "jshorts";
 
 export type ScrollItems = string[] | Pane[];
 
-export function scroll(state: State, items: ScrollItems, cols: number, rows: number) {
+export function scroll(state: State, header: Pane, items: ScrollItems, cols: number, rows: number) {
   const scrollMax = Math.max(items.length - rows, 0);
   const scrollDistance = Math.min(state.scroll, scrollMax);
+  const headerUnoccupiedSpace = Math.max(rows - Number(!!header), 0);
 
   return pane([
-    scrollview(scrollDistance, items, cols - state.scrollbarWidth, rows),
-    scrollbar(state, scrollDistance, scrollMax, items.length, rows),
-  ], cols, rows, "h");
+    header
+      ? pane([
+          tc.green("┃"),
+          pane(header, cols - 2, 1),
+          tc.green("┃"),
+        ], cols, 1, "h")
+      : null,
+    pane([
+      scrollview(scrollDistance, items, cols - state.scrollbarWidth, headerUnoccupiedSpace),
+      scrollbar(state, scrollDistance, scrollMax, items.length, headerUnoccupiedSpace),
+    ], 0, 0, "h"),
+  ], cols, rows, "v");
 }
 
 function scrollview(scrollDistance: number, items: ScrollItems, cols: number, rows: number) {
@@ -31,8 +41,8 @@ function scrollbar(state: State, scrollDistance: number, scrollMax: number, item
                   ? Math.round((scrollDistance / scrollMax) * sbPosMax)
                   : 0;
 
-  const scrollbarRow = tc.bgGreen(jSh.nChars(" ", state.scrollbarWidth));
-  const scrollbarTroughRow = tc.bgBlack(jSh.nChars(" ", state.scrollbarWidth));
+  const scrollbarRow = tc.red(jSh.nChars("┃", state.scrollbarWidth));
+  const scrollbarTroughRow = tc.gray(jSh.nChars("┃", state.scrollbarWidth));
   const trough: string[] = Array(rows).fill(scrollbarTroughRow);
 
   // Draw scrollbar
