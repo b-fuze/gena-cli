@@ -50,11 +50,11 @@ class UI {
 
     // Paint new screen onto buffer (before clearing to prevent flickering)
     const tr = performance.now();
-    const newBuffer = render(panes, cols, rows).join("\n");
+    const newBuffer = render(panes, cols, rows).canvas.join("\n");
     const tr2 = performance.now();
 
     // Reset screen
-    this.stdout.write(positionCursor(1, 1));
+    this.stdout.write(clearScreen + positionCursor(1, 1));
 
     // Write new screen
     this.stdout.write(newBuffer);
