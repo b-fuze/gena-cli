@@ -1,5 +1,5 @@
 import {pane, Pane} from "./pane";
-import {stripAnsi, strMultiply, sliceAnsi} from "term-utils";
+import {stripAnsi, strMultiply, sliceAnsi, SliceMeta} from "term-utils";
 import {jSh} from "jshorts";
 
 export function render(main: Pane, cols: number, rows: number, undetermined = false) {
@@ -8,6 +8,7 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
   const isHorizontal = main.dir === "h";
   const isVertical = !isHorizontal;
   let canvas: string[];
+  let maxCols = 0;
 
   if (undetermined) {
     const canvasCols = fill ? (isHorizontal ? cols : 1) : 0;
@@ -19,10 +20,10 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
 
   if (typeof main.contents === "function") {
     // The pane is merely a callback
-    canvas = render(pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows);
+    canvas = render(pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows).canvas;
   } else {
-    // [canvas, cols, offset, selfConsumption] - offset is optional
-    const renderedPanes: [string[], number][] = [];
+    // [canvas, cols, rows] - offset is optional
+    const renderedPanes: [string[], number, number][] = [];
     const deferred: number[] = [];
     let consumed = 0;
 
@@ -35,24 +36,19 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
         let paneRows = 1;
         let consumption = 0;
         const preRenderedContent = content.replace("\n", "");
-        const renderedContent = preRenderedContent && applyRightAlign(preRenderedContent, cols);
-        const strippedContent = renderedContent && stripAnsi(renderedContent);
+
+        let lineMeta: {out: string, length: number};
+        const renderedContent = preRenderedContent && (lineMeta = applyRightAlign(preRenderedContent, cols)).out;
+        const strippedContentLength = renderedContent.length && (lineMeta.length === -1 ? stripAnsi(renderedContent).length : lineMeta.length);
 
         if (isHorizontal) {
           paneRows = rows;
-          consumption = Math.min(strippedContent.length, cols);
+          consumption = Math.min(strippedContentLength, cols);
         } else {
           consumption = 1;
         }
 
-        const pane = paneMerge(
-          emptyCanvas(strippedContent.length, 1),
-          [renderedContent],
-          0, 0,
-          strippedContent.length, 1,
-        );
-
-        renderedPanes.push([pane, strippedContent.length]);
+        renderedPanes.push([[renderedContent], strippedContentLength, 1]);
         consumed += consumption;
       } else if (content) {
         // Child is a pane
@@ -63,29 +59,18 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
 
           const availCols = isVertical   ? cols : content.cols;
           const availRows = isHorizontal ? rows : content.rows;
-          const rendered = render(content, availCols, availRows);
+          const rawRender = render(content, availCols, availRows);
 
-          let paneCols = 0;
-          let paneRows = rendered.length;
-
-          // Get max cols
-          // FIXME: This is probably useless, should probably just adjust `paneMerge`'s 4th arg
-          for (const row of rendered) {
-            const strippedRow = stripAnsi(row);
-            paneCols = Math.max(strippedRow.length, paneCols);
-          }
+          const rendered = rawRender.canvas;
+          const paneCols = rawRender.cols;
+          const paneRows = rendered.length;
 
           const renderedPaneCols = Math.min(paneCols, availCols);
-          const pane = paneMerge(
-            emptyCanvas(content.cols || cols, content.rows || rows),
-            rendered,
-            0, 0,
-            renderedPaneCols, paneRows,
-          );
 
           renderedPanes.push([
-            pane,
-            renderedPaneCols,
+            rendered,
+            content.cols || cols,
+            content.rows || rows,
           ]);
 
         } else {
@@ -101,23 +86,18 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
         const pane = <Pane> main.contents[index];
         const paneRenderingCols = isVertical ? cols : cols - consumed;
         const paneRenderingRows = isHorizontal ? rows : rows - consumed;
-        const rendered = sliceCanvas(render(
+        const rawRender = render(
           pane,
           paneRenderingCols,
           paneRenderingRows,
           true,
-        ), paneRenderingCols, paneRenderingRows);
+        );
 
-        let paneCols = 0;
+        const rendered = rawRender.canvas;
+        const paneCols = rawRender.cols;
 
-        // Get max cols
-        for (const row of rendered) {
-          const strippedRow = stripAnsi(row);
-          paneCols = Math.max(strippedRow.length, paneCols);
-        }
-
-        let paneRendered: [string[], number];
-        renderedPanes[index] = paneRendered = [rendered, paneCols];
+        let paneRendered: [string[], number, number];
+        renderedPanes[index] = paneRendered = [rendered, paneRenderingCols, paneRenderingRows];
 
         if (isVertical) {
           consumed -= rendered.length;
@@ -136,7 +116,7 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
     let offset = 0;
     for (const pane of renderedPanes) {
       if (pane) {
-        canvas = paneMerge(
+        const converged = paneMerge(
           canvas,
           pane[0],
           isHorizontal ? offset : 0,
@@ -144,6 +124,9 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
           pane[1],
           pane[0].length,
         );
+
+        canvas = converged.pane;
+        maxCols = Math.max(converged.cols, maxCols);
 
         offset += isVertical ? pane[0].length : pane[1];
       }
@@ -154,7 +137,10 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
     canvas = canvas.map(line => post(line));
   }
 
-  return canvas;
+  return {
+    canvas,
+    cols: maxCols,
+  };
 }
 
 function paneMerge(
@@ -166,6 +152,7 @@ function paneMerge(
   rows: number,
 ) {
   let copy = canvas.slice();
+  let maxConsumedCols = 0;
   const lastRow = y + rows;
 
   if (copy.length < y) {
@@ -176,18 +163,17 @@ function paneMerge(
   for (let i=y; i<lastRow; i++) {
     const row = i in copy ? copy[i] : jSh.nChars(" ", cols);
     const subRowLine = contents[i - y];
-    const subRow = subRowLine ? sliceAnsi(subRowLine, 0, cols, true) : "";
-    const subRowStripped = stripAnsi(subRow);
-    copy[i] = (row ? sliceAnsi(row, 0, x, true) : "")
-              + subRow
-              + (row ? sliceAnsi(row, x + subRowStripped.length, undefined, true) : "");
+    const subRow = subRowLine ? sliceAnsi(subRowLine, 0, cols, true, true) : {out: "", length: 0};
+    let sliceData1: {out: string, length: number};
+    let sliceData2: {out: string, length: number};
+    copy[i] = (row ? (sliceData1 = sliceAnsi(row, 0, x, true, true)).out : "")
+              + subRow.out
+              + (row ? (sliceData2 = sliceAnsi(row, x + subRow.length, undefined, true, true)).out : "");
+
+    maxConsumedCols = Math.max(sliceData1.length + subRow.length + sliceData2.length, maxConsumedCols);
   }
 
-  return copy;
-}
-
-function sliceCanvas(canvas: string[], cols: number, rows: number) {
-  return canvas.slice(0, rows).map(line => line ? sliceAnsi(line, 0, cols) : "");
+  return {pane: copy, cols: maxConsumedCols};
 }
 
 function copyCanvas(canvas: string[]) {
@@ -199,34 +185,58 @@ function emptyCanvas(cols: number, rows: number) {
   return new Array<string>(rows).fill(row);
 }
 
-const rightAlignSymbolRe = /\\\][Rr]/g;
 function applyRightAlign(output: string, cols: number) {
-  rightAlignSymbolRe.lastIndex = 0;
-  const match = rightAlignSymbolRe.exec(output);
+  // old: const rightAlignSymbolRe = /\\\][Rr]/g;
+  const matchIndex = output.indexOf("\\]");
+  const meta = {
+    out: output,
+    length: -1,
+  };
 
-  if (match) {
-    const prefer = +(match[0][2] === "R");
-    const opposite = 1 - prefer;
+  if (matchIndex !== -1) {
+    const char = matchIndex;
+    let prefer = -1;
 
-    const sides = [
-      output.slice(0, match.index),
-      output.slice(match.index + 3),
-    ];
-
-    const sidesRaw = sides.map(s => stripAnsi(s));
-    const maxUnprefCol = cols - Math.min(sidesRaw[prefer].length, cols);
-
-    if (prefer === 0) {
-      // Prefer left side
-      sides[opposite] && (sides[opposite] = sliceAnsi(sides[opposite], 0, maxUnprefCol, true)); // sides[opposite].slice(0, maxUnprefCol);
-    } else {
-      // Prefer right side
-      sides[opposite] && (sides[opposite] = sliceAnsi(sides[opposite], -maxUnprefCol, undefined, true));
+    switch (output[matchIndex + 2]) {
+      case "R":
+        prefer = 1;
+        break;
+      case "r":
+        prefer = 0;
+        break;
     }
 
-    const preSliced = sides[0] + strMultiply(" ", maxUnprefCol - sidesRaw[opposite].length) + sides[1];
-    output = preSliced && sliceAnsi(preSliced, 0, cols);
+    if (prefer !== -1) {
+      const opposite = 1 - prefer;
+
+      const sides = [
+        output.slice(0, matchIndex),
+        output.slice(matchIndex + 3),
+      ];
+
+      let preferMeta: SliceMeta;
+      let oppositeMeta: SliceMeta;
+
+      if (prefer === 0) {
+        // Prefer left side
+        sides[prefer] = (preferMeta = sliceAnsi(sides[prefer], 0, cols, true, true)).out;
+      } else {
+        sides[prefer] = (preferMeta = sliceAnsi(sides[prefer], -cols, undefined, true, true)).out;
+      }
+
+      const maxUnprefCol = cols - Math.min(preferMeta.oldLength, cols);
+
+      if (prefer === 0) {
+        sides[opposite] = (oppositeMeta = sliceAnsi(sides[opposite], 0, maxUnprefCol, true, true)).out;
+      } else {
+        sides[opposite] = (oppositeMeta = sliceAnsi(sides[opposite], -maxUnprefCol, undefined, true, true)).out;
+      }
+
+      const middleLength = Math.max(maxUnprefCol - oppositeMeta.oldLength, 0);
+      meta.out = sides[0] + strMultiply(" ", middleLength) + sides[1];
+      meta.length = preferMeta.length + middleLength + oppositeMeta.length;
+    }
   }
 
-  return output;
+  return meta;
 }

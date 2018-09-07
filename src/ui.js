@@ -40,10 +40,10 @@ class UI {
         const tp2 = perf_hooks_1.performance.now();
         // Paint new screen onto buffer (before clearing to prevent flickering)
         const tr = perf_hooks_1.performance.now();
-        const newBuffer = render_pane_1.render(panes, cols, rows).join("\n");
+        const newBuffer = render_pane_1.render(panes, cols, rows).canvas.join("\n");
         const tr2 = perf_hooks_1.performance.now();
         // Reset screen
-        this.stdout.write(positionCursor(1, 1));
+        this.stdout.write(clearScreen + positionCursor(1, 1));
         // Write new screen
         this.stdout.write(newBuffer);
         // Save paint performance
