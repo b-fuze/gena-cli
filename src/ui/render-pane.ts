@@ -173,9 +173,9 @@ function paneMerge(
     const subRow = subRowLine ? sliceAnsi(subRowLine, 0, cols, true, true) : {out: "", length: 0};
     let sliceData1: {out: string, length: number};
     let sliceData2: {out: string, length: number};
-    copy[i] = (row ? (sliceData1 = sliceAnsi(row, 0, x, true, true)).out : "")
+    copy[i] = (row ? (sliceData1 = sliceAnsi(row, 0, x, true, true)).out : (sliceData1 = {out: "", length: 0}, ""))
               + subRow.out
-              + (row ? (sliceData2 = sliceAnsi(row, x + subRow.length, undefined, true, true)).out : "");
+              + (row ? (sliceData2 = sliceAnsi(row, x + subRow.length, undefined, true, true)).out : (sliceData2 = {out: "", length: 0}, ""));
 
     maxConsumedCols = Math.max(sliceData1.length + subRow.length + sliceData2.length, maxConsumedCols);
   }

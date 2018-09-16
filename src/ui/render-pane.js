@@ -129,9 +129,9 @@ function paneMerge(canvas, contents, x, y, cols, rows) {
         const subRow = subRowLine ? term_utils_1.sliceAnsi(subRowLine, 0, cols, true, true) : { out: "", length: 0 };
         let sliceData1;
         let sliceData2;
-        copy[i] = (row ? (sliceData1 = term_utils_1.sliceAnsi(row, 0, x, true, true)).out : "")
+        copy[i] = (row ? (sliceData1 = term_utils_1.sliceAnsi(row, 0, x, true, true)).out : (sliceData1 = { out: "", length: 0 }, ""))
             + subRow.out
-            + (row ? (sliceData2 = term_utils_1.sliceAnsi(row, x + subRow.length, undefined, true, true)).out : "");
+            + (row ? (sliceData2 = term_utils_1.sliceAnsi(row, x + subRow.length, undefined, true, true)).out : (sliceData2 = { out: "", length: 0 }, ""));
         maxConsumedCols = Math.max(sliceData1.length + subRow.length + sliceData2.length, maxConsumedCols);
     }
     return { pane: copy, cols: maxConsumedCols };
