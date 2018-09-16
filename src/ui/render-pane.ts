@@ -2,7 +2,12 @@ import {pane, Pane} from "./pane";
 import {stripAnsi, strMultiply, sliceAnsi, SliceMeta} from "term-utils";
 import {jSh} from "jshorts";
 
-export function render(main: Pane, cols: number, rows: number, undetermined = false) {
+export interface RenderMeta {
+  canvas: string[];
+  cols: number;
+}
+
+export function render(main: Pane, cols: number, rows: number, undetermined = false): RenderMeta {
   const {post, fill} = main;
 
   const isHorizontal = main.dir === "h";
@@ -20,7 +25,9 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
 
   if (typeof main.contents === "function") {
     // The pane is merely a callback
-    canvas = render(pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows).canvas;
+    let canvasMeta: RenderMeta;
+    canvas = (canvasMeta = render(pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows)).canvas;
+    maxCols = canvasMeta.cols;
   } else {
     // [canvas, cols, rows] - offset is optional
     const renderedPanes: [string[], number, number][] = [];

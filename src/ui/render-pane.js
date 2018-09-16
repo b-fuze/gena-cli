@@ -19,7 +19,9 @@ function render(main, cols, rows, undetermined = false) {
     }
     if (typeof main.contents === "function") {
         // The pane is merely a callback
-        canvas = render(pane_1.pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows).canvas;
+        let canvasMeta;
+        canvas = (canvasMeta = render(pane_1.pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows)).canvas;
+        maxCols = canvasMeta.cols;
     }
     else {
         // [canvas, cols, rows] - offset is optional
