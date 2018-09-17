@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // Full state of GENA
 const anv_1 = require("./anv");
+const utils_1 = require("./utils");
 var FocusedView;
 (function (FocusedView) {
     FocusedView["TASKLIST"] = "tasklist";
@@ -21,6 +22,7 @@ var HeaderState;
 })(HeaderState = exports.HeaderState || (exports.HeaderState = {}));
 ;
 exports.ViewUpdatesSymbol = Symbol();
+exports.OldStateSymbol = Symbol();
 exports.state = {
     start: true,
     connection: "ws",
@@ -45,12 +47,17 @@ exports.state = {
     mediaExpanded: false,
     tasks: [],
     lastKey: 0,
+    // Meta state
     lastPaintDuration: 0,
     lastPaneBuildDuration: 0,
+    lastPaneDiffDuration: 0,
+    samePanes: 0,
+    diffPanes: 0,
     // Computed
     activeMedia: 0,
     // View reference
     [exports.ViewUpdatesSymbol]: null,
+    [exports.OldStateSymbol]: null,
 };
 exports.computedState = {
     activeMedia(state) {
@@ -65,6 +72,14 @@ exports.computedState = {
         return active;
     }
 };
+function setOldState(state) {
+    state[exports.OldStateSymbol] = utils_1.deepCopy(state);
+}
+exports.setOldState = setOldState;
+function getOldState(state) {
+    return state[exports.OldStateSymbol];
+}
+exports.getOldState = getOldState;
 function update(state, newState) {
     const view = state[exports.ViewUpdatesSymbol];
     view.updates.push(newState);

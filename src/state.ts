@@ -1,5 +1,6 @@
 // Full state of GENA
 import {Task, MediaStatus} from "./anv";
+import {deepCopy} from "./utils";
 export type ConnectionType = "ws" | "ipc";
 
 export enum FocusedView {
@@ -18,6 +19,7 @@ export enum HeaderState {
 };
 
 export const ViewUpdatesSymbol = Symbol();
+export const OldStateSymbol = Symbol();
 export const state = {
   start: true,
   connection: <ConnectionType> "ws",
@@ -48,14 +50,20 @@ export const state = {
 
   lastKey: <number | string> 0,
 
+  // Meta state
   lastPaintDuration: 0,
   lastPaneBuildDuration: 0,
+  lastPaneDiffDuration: 0,
+
+  samePanes: 0,
+  diffPanes: 0,
 
   // Computed
   activeMedia: 0,
 
   // View reference
   [ViewUpdatesSymbol]: <ViewUpdates> null,
+  [OldStateSymbol]: <any> null,
 };
 
 export const computedState: {
@@ -75,6 +83,14 @@ export const computedState: {
     return active;
   }
 };
+
+export function setOldState(state: State) {
+  state[OldStateSymbol] = deepCopy(state);
+}
+
+export function getOldState(state: State) {
+  return <State> state[OldStateSymbol];
+}
 
 export function update(state: State, newState: PartialState) {
   const view = state[ViewUpdatesSymbol];
