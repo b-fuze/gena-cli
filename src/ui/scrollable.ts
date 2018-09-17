@@ -1,34 +1,57 @@
-import {State, update} from "../state";
+import {State, update, getOldState} from "../state";
 import {pane, Pane, PaneContent} from "./pane";
 import tc from "turbocolor";
+import {center, forceAnsi} from "term-utils";
 import {jSh} from "jshorts";
 
 export type ScrollItems = string[] | Pane[];
 
-export function scroll(state: State, header: Pane, items: ScrollItems, cols: number, rows: number) {
-  const scrollMax = Math.max(items.length - rows, 0);
+export function scroll(state: State, header: Pane, items: ScrollItems, cols: number, rows: number, notification?: string) {
+  const notifiHeight = 3;
+  const viewRows = notification ? rows - notifiHeight : rows;
+
+  const scrollMax = Math.max(items.length - viewRows, 0);
   const scrollDistance = Math.min(state.scroll, scrollMax);
-  const headerUnoccupiedSpace = Math.max(rows - Number(!!header), 0);
+  const headerUnoccupiedSpace = Math.max(viewRows - Number(!!header), 0);
+  const oldState = getOldState(state);
+  const scrollDiff = oldState ? state.scroll - oldState.scroll : 0;
 
   return pane([
-    header
+    notification
       ? pane([
-          tc.green("┃"),
-          pane(header, cols - 2, 1),
-          tc.green("┃"),
-        ], cols, 1, "h")
+          pane([
+            pane(new Array(notifiHeight).fill(tc.green("┃")), 1, notifiHeight),
+            pane([
+              "",
+              center(notification, cols - 2),
+              "",
+            ], cols - 2, notifiHeight),
+          ],
+          cols - 1, notifiHeight, "h", false, (line) => forceAnsi(line, tc.Styles.bgWhite.open)),
+          pane(new Array(notifiHeight).fill(tc.green("┃")), 1, notifiHeight),
+        ],
+        cols, notifiHeight, "h")
       : null,
     pane([
-      scrollview(scrollDistance, items, cols - state.scrollbarWidth, headerUnoccupiedSpace),
-      scrollbar(state, scrollDistance, scrollMax, items.length, headerUnoccupiedSpace),
-    ], 0, 0, "h"),
-  ], cols, rows, "v");
+      header
+        ? pane([
+            tc.green("┃"),
+            pane(header, cols - 2, 1),
+            tc.green("┃"),
+          ], cols, 1, "h")
+        : null,
+      pane([
+        scrollview(scrollDistance, items, cols - state.scrollbarWidth, headerUnoccupiedSpace, scrollDiff),
+        scrollbar(state, scrollDistance, scrollMax, items.length, headerUnoccupiedSpace),
+      ], 0, 0, "h"),
+    ], cols, viewRows, "v")
+  ], cols, viewRows, "v");
 }
 
-function scrollview(scrollDistance: number, items: ScrollItems, cols: number, rows: number) {
+function scrollview(scrollDistance: number, items: ScrollItems, cols: number, rows: number, scrollDiff: number) {
   return pane([
     pane(new Array(rows).fill(tc.green("┃")), 1, rows),
-    pane(items.slice(scrollDistance, rows + scrollDistance), cols - 1, rows),
+    pane(items.slice(scrollDistance, rows + scrollDistance), cols - 1, rows, "v", false, null, scrollDiff),
   ], cols, rows, "h");
 }
 

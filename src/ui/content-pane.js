@@ -10,7 +10,7 @@ const task_row_1 = require("./task-row");
 function content(state) {
     return pane_1.pane((cols, rows) => {
         const items = state.tasks.map((t, i) => pane_1.pane((cols) => task_row_1.taskRow(t.id + "", turbocolor_1.default.green(t.title), t.currentDl, cols, false), 0, 1));
-        return scrollable_1.scroll(state, pane_1.pane((cols, rows) => task_row_1.taskRow("#", "TASK", 0, cols, true), 0, 1), items, cols, rows);
+        return scrollable_1.scroll(state, pane_1.pane((cols, rows) => task_row_1.taskRow("#", "TASK", 0, cols, true), 0, 1), items, cols, rows, state.showNotification && turbocolor_1.default.bold.blue("SEND HELP TO WEEB LAND PLES"));
     }, 0, 0, "v");
 }
 exports.content = content;

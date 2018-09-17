@@ -10,8 +10,12 @@ function footer(state, cols) {
     return pane_1.pane([
         turbocolor_1.default.green("┗" + term_utils_1.strFill("━", cols - 2) + "┛"),
         "Build (panes): " + turbocolor_1.default.bold("" + state.lastPaneBuildDuration + "ms")
+            + " Diff: " + turbocolor_1.default.bold("" + state.lastPaneDiffDuration + "ms")
             + " Render: " + turbocolor_1.default.bold("" + state.lastPaintDuration + "ms")
-            + term_utils_1.rightAlign(turbocolor_1.default.dim.white(" " + state.lastKey), true),
+            + turbocolor_1.default.bold.red(" |")
+            + " SAME: " + turbocolor_1.default.bold("" + state.samePanes)
+            + " DIFF: " + turbocolor_1.default.bold("" + state.diffPanes)
+            + term_utils_1.rightAlign(turbocolor_1.default.dim.white("    " + state.lastKey), true),
     ], cols, 2);
 }
 exports.footer = footer;

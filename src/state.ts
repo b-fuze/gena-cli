@@ -48,6 +48,8 @@ export const state = {
   mediaExpanded: false,
   tasks: <Task[]> [],
 
+  showNotification: false,
+
   lastKey: <number | string> 0,
 
   // Meta state

@@ -46,6 +46,7 @@ exports.state = {
     selectedMedia: 0,
     mediaExpanded: false,
     tasks: [],
+    showNotification: false,
     lastKey: 0,
     // Meta state
     lastPaintDuration: 0,

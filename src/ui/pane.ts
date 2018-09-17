@@ -12,13 +12,22 @@ export interface Pane {
   dir: PaneDir;
   fill: boolean;
   post(line: string): string;
+  cache: {
+    contents: (string | Pane)[],
+    diff: boolean;
+    dirDiff: boolean;
+    rendered: string[];
+    renderedCols: number;
+    verticalShift: number;
+  }
 }
 
-export function pane(contents: PaneContentCallback, cols = 0, rows = 0, dir: PaneDir = "v", fill = false, post?: Pane["post"]): Pane {
+export function pane(contents: PaneContentCallback, cols = 0, rows = 0, dir: PaneDir = "v", fill = false, post?: Pane["post"], vShift = 0): Pane {
   let paneContent = <any> contents;
+  const contentsFunc = typeof contents === "function";
 
   // Wrap in array if it's raw content and unwrapped
-  if (typeof contents !== "function" && !Array.isArray(contents)) {
+  if (!contentsFunc && !Array.isArray(contents)) {
     paneContent = [contents];
   }
 
@@ -29,5 +38,13 @@ export function pane(contents: PaneContentCallback, cols = 0, rows = 0, dir: Pan
     dir,
     fill,
     post,
+    cache: {
+      contents: contentsFunc ? null : paneContent,
+      diff: true,
+      dirDiff: true,
+      rendered: null,
+      renderedCols: 0,
+      verticalShift: vShift,
+    }
   };
 }

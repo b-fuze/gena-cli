@@ -1,6 +1,6 @@
-import {State, computedState} from "./state";
-import {pane} from "./ui/pane";
-import {render} from "./ui/render-pane";
+import {State, computedState, setOldState} from "./state";
+import {pane, Pane} from "./ui/pane";
+import {render, diffPanes} from "./ui/render-pane";
 import {window} from "./ui/window";
 import {MediaStatus} from "./anv";
 import {performance} from "perf_hooks";
@@ -15,6 +15,9 @@ const positionCursor   = (col: number, row: number) => `\u001b[${ row };${ col }
 export
 class UI {
   active = false;
+  lastPane: Pane = null;
+  lastCols: number = 0;
+  lastRows: number = 0;
 
   constructor(
     public stdin: NodeJS.ReadStream,
@@ -48,6 +51,18 @@ class UI {
     const panes = window(state, cols, rows);
     const tp2 = performance.now();
 
+    // Clear diff panes
+    state.samePanes = 0;
+    state.diffPanes = 0;
+
+    let td: number;
+    let td2: number;
+    if (this.lastPane) {
+      td = performance.now();
+      diffPanes(this.lastPane, panes, state);
+      td2 = performance.now();
+    }
+
     // Paint new screen onto buffer (before clearing to prevent flickering)
     const tr = performance.now();
     const newBuffer = render(panes, cols, rows).canvas.join("\n");
@@ -62,9 +77,18 @@ class UI {
     // Save paint performance
     state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
     state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
+
+    if (td !== undefined) {
+      state.lastPaneDiffDuration = Math.floor((td2 - td) * 100) / 100;
+    }
+
+    // Save lastPane
+    this.lastPane = panes;
   }
 
   update(state: State, input: number | string, fullInput: string) {
+    setOldState(state);
+
     if (input === 27) {
       input = fullInput.charCodeAt(2);
       // Escape sequence
@@ -112,8 +136,13 @@ class UI {
             title: titles[Math.round(Math.random() * (titles.length - 1))],
           });
           break;
+
         case 45: // Minus/dash key
           state.tasks.pop();
+          break;
+
+        case 13: // Enter key
+          state.showNotification = !state.showNotification;
           break;
       }
     }

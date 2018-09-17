@@ -14,6 +14,6 @@ export function content(state: State) {
       0,
       cols,
       true,
-    ), 0, 1), items, cols, rows);
+    ), 0, 1), items, cols, rows, state.showNotification && tc.bold.blue("SEND HELP TO WEEB LAND PLES"));
   }, 0, 0, "v");
 }

@@ -1,6 +1,7 @@
-import {pane, Pane} from "./pane";
+import {pane, Pane, PaneContent} from "./pane";
 import {stripAnsi, strMultiply, sliceAnsi, SliceMeta} from "term-utils";
 import {jSh} from "jshorts";
+import {state, State} from "../state";
 
 export interface RenderMeta {
   canvas: string[];
@@ -8,6 +9,13 @@ export interface RenderMeta {
 }
 
 export function render(main: Pane, cols: number, rows: number, undetermined = false): RenderMeta {
+  if (!main.cache.diff) {
+    return {
+      canvas: main.cache.rendered.slice(0, rows),
+      cols: main.cache.renderedCols,
+    }
+  }
+
   const {post, fill} = main;
 
   const isHorizontal = main.dir === "h";
@@ -25,9 +33,28 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
 
   if (typeof main.contents === "function") {
     // The pane is merely a callback
+    const newPane = pane(main.contents(cols, rows), cols, rows, main.dir);
+    const oldPane = !main.cache.dirDiff && main.cache.contents && pane(main.cache.contents, cols, rows, main.dir);
+    let newCanvasMeta: RenderMeta;
+
+    if (oldPane) {
+      // FIXME: !!!!!! REMOVE `state` FROM HEEREEE !!!!!!!
+      const diff = diffPanes(oldPane, newPane, state);
+
+      if (!diff) {
+        newCanvasMeta = {
+          canvas: main.cache.rendered,
+          cols: main.cache.renderedCols,
+        };
+      }
+    }
+
     let canvasMeta: RenderMeta;
-    canvas = (canvasMeta = render(pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows)).canvas;
+    canvas = (canvasMeta = newCanvasMeta || render(newPane, cols, rows)).canvas;
     maxCols = canvasMeta.cols;
+
+    // Cache new contents
+    main.cache.contents = <any> newPane.contents;
   } else {
     // [canvas, cols, rows] - offset is optional
     const renderedPanes: [string[], number, number][] = [];
@@ -144,6 +171,10 @@ export function render(main: Pane, cols: number, rows: number, undetermined = fa
     canvas = canvas.map(line => post(line));
   }
 
+  // Cache this pane
+  main.cache.rendered = canvas;
+  main.cache.renderedCols = maxCols;
+
   return {
     canvas,
     cols: maxCols,
@@ -181,6 +212,81 @@ function paneMerge(
   }
 
   return {pane: copy, cols: maxConsumedCols};
+}
+
+export function diffPanes(old: Pane, cur: Pane, state: State) {
+  if (!cur || !old) {
+    return true;
+  }
+
+  cur.cache.dirDiff = old.dir !== cur.dir;
+  cur.cache.contents = old.cache.contents;
+  cur.cache.rendered = old.cache.rendered;
+  cur.cache.renderedCols = old.cache.renderedCols;
+
+  if (typeof old.contents === "function" || typeof cur.contents === "function") {
+    return true;
+  }
+
+  let diff = false;
+
+  if (old.cols !== cur.cols || old.rows !== old.rows) {
+    diff = true;
+  }
+
+  if (old.dir === cur.dir) {
+    // Compare children since the direction is the same
+    let oldChildren: PaneContent;
+
+    if (cur.dir === "h") {
+      oldChildren = old.contents;
+    } else {
+      if (cur.cache.verticalShift && cur.cache.verticalShift < 0) {
+        oldChildren = new Array(-1 * cur.cache.verticalShift).fill("").concat(old.contents);
+      } else {
+        oldChildren = old.contents.slice(cur.cache.verticalShift);
+      }
+    }
+
+    const curChildren = cur.contents;
+
+    for (let i=0; i<curChildren.length; i++) {
+      const oldChild = oldChildren[i];
+      const curChild = curChildren[i];
+
+      if (oldChild === undefined) {
+        // Not same child count even
+        diff = true;
+        break;
+      } else {
+        if (typeof curChild === "string") {
+          if (oldChild !== curChild) {
+            diff = true;
+          }
+        } else {
+          if (typeof oldChild === "string") {
+            diff = true;
+          } else {
+            const childDiff = diffPanes(oldChild, curChild, state);
+
+            if (childDiff) diff = true;
+          }
+        }
+      }
+
+    }
+  } else {
+    // Direction is different
+    diff = true;
+  }
+
+  if (diff) {
+    state.diffPanes++;
+  } else {
+    state.samePanes++;
+  }
+
+  return cur.cache.diff = diff;
 }
 
 function copyCanvas(canvas: string[]) {

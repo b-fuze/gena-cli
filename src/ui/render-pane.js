@@ -3,7 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const pane_1 = require("./pane");
 const term_utils_1 = require("term-utils");
 const jshorts_1 = require("jshorts");
+const state_1 = require("../state");
 function render(main, cols, rows, undetermined = false) {
+    if (!main.cache.diff) {
+        return {
+            canvas: main.cache.rendered.slice(0, rows),
+            cols: main.cache.renderedCols,
+        };
+    }
     const { post, fill } = main;
     const isHorizontal = main.dir === "h";
     const isVertical = !isHorizontal;
@@ -19,9 +26,24 @@ function render(main, cols, rows, undetermined = false) {
     }
     if (typeof main.contents === "function") {
         // The pane is merely a callback
+        const newPane = pane_1.pane(main.contents(cols, rows), cols, rows, main.dir);
+        const oldPane = !main.cache.dirDiff && main.cache.contents && pane_1.pane(main.cache.contents, cols, rows, main.dir);
+        let newCanvasMeta;
+        if (oldPane) {
+            // FIXME: !!!!!! REMOVE `state` FROM HEEREEE !!!!!!!
+            const diff = diffPanes(oldPane, newPane, state_1.state);
+            if (!diff) {
+                newCanvasMeta = {
+                    canvas: main.cache.rendered,
+                    cols: main.cache.renderedCols,
+                };
+            }
+        }
         let canvasMeta;
-        canvas = (canvasMeta = render(pane_1.pane(main.contents(cols, rows), cols, rows, main.dir), cols, rows)).canvas;
+        canvas = (canvasMeta = newCanvasMeta || render(newPane, cols, rows)).canvas;
         maxCols = canvasMeta.cols;
+        // Cache new contents
+        main.cache.contents = newPane.contents;
     }
     else {
         // [canvas, cols, rows] - offset is optional
@@ -109,6 +131,9 @@ function render(main, cols, rows, undetermined = false) {
     if (post) {
         canvas = canvas.map(line => post(line));
     }
+    // Cache this pane
+    main.cache.rendered = canvas;
+    main.cache.renderedCols = maxCols;
     return {
         canvas,
         cols: maxCols,
@@ -136,6 +161,76 @@ function paneMerge(canvas, contents, x, y, cols, rows) {
     }
     return { pane: copy, cols: maxConsumedCols };
 }
+function diffPanes(old, cur, state) {
+    if (!cur || !old) {
+        return true;
+    }
+    cur.cache.dirDiff = old.dir !== cur.dir;
+    cur.cache.contents = old.cache.contents;
+    cur.cache.rendered = old.cache.rendered;
+    cur.cache.renderedCols = old.cache.renderedCols;
+    if (typeof old.contents === "function" || typeof cur.contents === "function") {
+        return true;
+    }
+    let diff = false;
+    if (old.cols !== cur.cols || old.rows !== old.rows) {
+        diff = true;
+    }
+    if (old.dir === cur.dir) {
+        // Compare children since the direction is the same
+        let oldChildren;
+        if (cur.dir === "h") {
+            oldChildren = old.contents;
+        }
+        else {
+            if (cur.cache.verticalShift && cur.cache.verticalShift < 0) {
+                oldChildren = new Array(-1 * cur.cache.verticalShift).fill("").concat(old.contents);
+            }
+            else {
+                oldChildren = old.contents.slice(cur.cache.verticalShift);
+            }
+        }
+        const curChildren = cur.contents;
+        for (let i = 0; i < curChildren.length; i++) {
+            const oldChild = oldChildren[i];
+            const curChild = curChildren[i];
+            if (oldChild === undefined) {
+                // Not same child count even
+                diff = true;
+                break;
+            }
+            else {
+                if (typeof curChild === "string") {
+                    if (oldChild !== curChild) {
+                        diff = true;
+                    }
+                }
+                else {
+                    if (typeof oldChild === "string") {
+                        diff = true;
+                    }
+                    else {
+                        const childDiff = diffPanes(oldChild, curChild, state);
+                        if (childDiff)
+                            diff = true;
+                    }
+                }
+            }
+        }
+    }
+    else {
+        // Direction is different
+        diff = true;
+    }
+    if (diff) {
+        state.diffPanes++;
+    }
+    else {
+        state.samePanes++;
+    }
+    return cur.cache.diff = diff;
+}
+exports.diffPanes = diffPanes;
 function copyCanvas(canvas) {
     return canvas.slice();
 }

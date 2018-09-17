@@ -16,6 +16,9 @@ class UI {
         this.stdin = stdin;
         this.stdout = stdout;
         this.active = false;
+        this.lastPane = null;
+        this.lastCols = 0;
+        this.lastRows = 0;
     }
     start() {
         if (!this.active) {
@@ -38,6 +41,16 @@ class UI {
         const tp = perf_hooks_1.performance.now();
         const panes = window_1.window(state, cols, rows);
         const tp2 = perf_hooks_1.performance.now();
+        // Clear diff panes
+        state.samePanes = 0;
+        state.diffPanes = 0;
+        let td;
+        let td2;
+        if (this.lastPane) {
+            td = perf_hooks_1.performance.now();
+            render_pane_1.diffPanes(this.lastPane, panes, state);
+            td2 = perf_hooks_1.performance.now();
+        }
         // Paint new screen onto buffer (before clearing to prevent flickering)
         const tr = perf_hooks_1.performance.now();
         const newBuffer = render_pane_1.render(panes, cols, rows).canvas.join("\n");
@@ -49,8 +62,14 @@ class UI {
         // Save paint performance
         state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
         state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
+        if (td !== undefined) {
+            state.lastPaneDiffDuration = Math.floor((td2 - td) * 100) / 100;
+        }
+        // Save lastPane
+        this.lastPane = panes;
     }
     update(state, input, fullInput) {
+        state_1.setOldState(state);
         if (input === 27) {
             input = fullInput.charCodeAt(2);
             // Escape sequence
@@ -99,6 +118,9 @@ class UI {
                     break;
                 case 45: // Minus/dash key
                     state.tasks.pop();
+                    break;
+                case 13: // Enter key
+                    state.showNotification = !state.showNotification;
                     break;
             }
         }
