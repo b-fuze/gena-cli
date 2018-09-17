@@ -56,7 +56,7 @@ class UI {
         const newBuffer = render_pane_1.render(panes, cols, rows).canvas.join("\n");
         const tr2 = perf_hooks_1.performance.now();
         // Reset screen
-        this.stdout.write(clearScreen + positionCursor(1, 1));
+        this.stdout.write(positionCursor(1, 1));
         // Write new screen
         this.stdout.write(newBuffer);
         // Save paint performance
