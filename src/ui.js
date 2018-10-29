@@ -17,8 +17,8 @@ class UI {
         this.stdout = stdout;
         this.active = false;
         this.lastPane = null;
-        this.lastCols = 0;
-        this.lastRows = 0;
+        this.updateRecursion = 0;
+        this.maxUpdateRecursion = 6;
     }
     start() {
         if (!this.active) {
@@ -37,6 +37,9 @@ class UI {
     render(state) {
         const cols = this.stdout.columns;
         const rows = this.stdout.rows;
+        // Update state cols/rows
+        state.viewCols = cols;
+        state.viewRows = rows;
         // Build panes
         const tp = perf_hooks_1.performance.now();
         const panes = window_1.window(state, cols, rows);
@@ -55,18 +58,27 @@ class UI {
         const tr = perf_hooks_1.performance.now();
         const newBuffer = render_pane_1.render(panes, cols, rows).canvas.join("\n");
         const tr2 = perf_hooks_1.performance.now();
-        // Reset screen
-        this.stdout.write(positionCursor(1, 1));
-        // Write new screen
-        this.stdout.write(newBuffer);
-        // Save paint performance
-        state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
-        state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
-        if (td !== undefined) {
-            state.lastPaneDiffDuration = Math.floor((td2 - td) * 100) / 100;
+        if (this.updateRecursion < this.maxUpdateRecursion && state_1.applyUpdates(state)) {
+            // Render again to reflect new updates
+            this.updateRecursion++;
+            this.render(state);
         }
-        // Save lastPane
-        this.lastPane = panes;
+        else {
+            // No updates, finish writing new buffer screen
+            // Reset screen
+            this.stdout.write(positionCursor(1, 1));
+            // Write new screen
+            this.stdout.write(newBuffer);
+            // Save paint performance
+            state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
+            state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
+            if (td !== undefined) {
+                state.lastPaneDiffDuration = Math.floor((td2 - td) * 100) / 100;
+            }
+            // Save lastPane
+            this.lastPane = panes;
+            this.updateRecursion = 0;
+        }
     }
     update(state, input, fullInput) {
         state_1.setOldState(state);
@@ -75,10 +87,10 @@ class UI {
             // Escape sequence
             switch (input) {
                 case 65: // Up arrow
-                    state.scroll = Math.max(state.scroll - 2, 0);
+                    state.scrollCursor = Math.max(state.scrollCursor - 1, 0);
                     break;
                 case 66: // Down arrow
-                    state.scroll += 2;
+                    state.scrollCursor = Math.max(Math.min(state.scrollCursor + 1, state.scrollItemCount - 1), 0);
                     break;
                 case 68: // Left arrow
                     state.scrollbarWidth++;
@@ -104,9 +116,8 @@ class UI {
                         "The retired fable of old, since yonder times...",
                     ];
                     state.tasks.push({
+                        provider: ["9anime", "gogoanime", "animerush"][Math.floor(Math.random() * 3)],
                         list: [
-                            { status: anv_1.MediaStatus.ACTIVE },
-                            { status: anv_1.MediaStatus.ACTIVE },
                             { status: anv_1.MediaStatus.ACTIVE },
                             { status: anv_1.MediaStatus.ACTIVE },
                             { status: anv_1.MediaStatus.ACTIVE },

@@ -151,12 +151,12 @@ function paneMerge(canvas, contents, x, y, cols, rows) {
     for (let i = y; i < lastRow; i++) {
         const row = i in copy ? copy[i] : jshorts_1.jSh.nChars(" ", cols);
         const subRowLine = contents[i - y];
-        const subRow = subRowLine ? term_utils_1.sliceAnsi(subRowLine, 0, cols, true, true) : { out: "", length: 0 };
+        const subRow = subRowLine ? term_utils_1.sliceAnsi(subRowLine, 0, cols, term_utils_1.ResetSlice.ALL, true) : { out: "", length: 0 };
         let sliceData1;
         let sliceData2;
-        copy[i] = (row ? (sliceData1 = term_utils_1.sliceAnsi(row, 0, x, true, true)).out : (sliceData1 = { out: "", length: 0 }, ""))
+        copy[i] = (row ? (sliceData1 = term_utils_1.sliceAnsi(row, 0, x, term_utils_1.ResetSlice.ALL, true)).out : (sliceData1 = { out: "", length: 0 }, ""))
             + subRow.out
-            + (row ? (sliceData2 = term_utils_1.sliceAnsi(row, x + subRow.length, undefined, true, true)).out : (sliceData2 = { out: "", length: 0 }, ""));
+            + (row ? (sliceData2 = term_utils_1.sliceAnsi(row, x + subRow.length, undefined, term_utils_1.ResetSlice.ALL, true)).out : (sliceData2 = { out: "", length: 0 }, ""));
         maxConsumedCols = Math.max(sliceData1.length + subRow.length + sliceData2.length, maxConsumedCols);
     }
     return { pane: copy, cols: maxConsumedCols };
@@ -246,8 +246,8 @@ function applyRightAlign(output, cols) {
         length: -1,
     };
     if (matchIndex !== -1) {
-        const char = matchIndex;
         let prefer = -1;
+        let slide = -1;
         switch (output[matchIndex + 2]) {
             case "R":
                 prefer = 1;
@@ -256,28 +256,41 @@ function applyRightAlign(output, cols) {
                 prefer = 0;
                 break;
         }
-        if (prefer !== -1) {
+        switch (output[matchIndex + 3]) {
+            case "/":
+                slide = 1;
+                break;
+            case "\\":
+                slide = 0;
+                break;
+        }
+        if (prefer !== -1 && slide !== -1) {
             const opposite = 1 - prefer;
             const sides = [
                 output.slice(0, matchIndex),
-                output.slice(matchIndex + 3),
+                output.slice(matchIndex + 4),
             ];
             let preferMeta;
             let oppositeMeta;
             if (prefer === 0) {
                 // Prefer left side
-                sides[prefer] = (preferMeta = term_utils_1.sliceAnsi(sides[prefer], 0, cols, true, true)).out;
+                sides[prefer] = (preferMeta = term_utils_1.sliceAnsi(sides[prefer], 0, cols, term_utils_1.ResetSlice.ALL, true)).out;
             }
             else {
-                sides[prefer] = (preferMeta = term_utils_1.sliceAnsi(sides[prefer], -cols, undefined, true, true)).out;
+                sides[prefer] = (preferMeta = term_utils_1.sliceAnsi(sides[prefer], -cols, undefined, term_utils_1.ResetSlice.ALL, true)).out;
             }
             const maxUnprefCol = cols - Math.min(preferMeta.oldLength, cols);
-            if (prefer === 0) {
-                sides[opposite] = (oppositeMeta = term_utils_1.sliceAnsi(sides[opposite], 0, maxUnprefCol, true, true)).out;
+            let unprefStart;
+            let unprefEnd;
+            if (slide) {
+                unprefStart = -maxUnprefCol;
+                unprefEnd = undefined;
             }
             else {
-                sides[opposite] = (oppositeMeta = term_utils_1.sliceAnsi(sides[opposite], -maxUnprefCol, undefined, true, true)).out;
+                unprefStart = 0;
+                unprefEnd = maxUnprefCol;
             }
+            sides[opposite] = (oppositeMeta = term_utils_1.sliceAnsi(sides[opposite], unprefStart, unprefEnd, term_utils_1.ResetSlice.ALL, true)).out;
             const middleLength = Math.max(maxUnprefCol - oppositeMeta.oldLength, 0);
             meta.out = sides[0] + term_utils_1.strMultiply(" ", middleLength) + sides[1];
             meta.length = preferMeta.length + middleLength + oppositeMeta.length;

@@ -32,6 +32,7 @@ exports.state = {
     view: "tasklist",
     header: "main",
     footer: "listtips",
+    isDebug: false,
     confirmText: "Are you sure?",
     inputText: "",
     inputTextScroll: 0,
@@ -41,6 +42,7 @@ exports.state = {
     scrollbarMinHeight: 2,
     scrollbarWidth: 1,
     scrollPaneHeight: 0,
+    scrollMax: 0,
     scrollItemCount: 0,
     selectedTask: 0,
     selectedMedia: 0,
@@ -56,6 +58,9 @@ exports.state = {
     diffPanes: 0,
     // Computed
     activeMedia: 0,
+    // View meta
+    viewCols: 0,
+    viewRows: 0,
     // View reference
     [exports.ViewUpdatesSymbol]: null,
     [exports.OldStateSymbol]: null,
@@ -71,8 +76,25 @@ exports.computedState = {
             }
         }
         return active;
+    },
+    scroll(state) {
+        const min = Math.min(state.scrollCursor - state.scrollPaneHeight + 1, Math.max(state.scrollItemCount - state.scrollPaneHeight, 0));
+        const max = Math.max(state.scrollCursor - 1, 0);
+        if (state.scroll < min) {
+            return min;
+        }
+        else if (state.scroll > max) {
+            return max;
+        }
+        else {
+            return state.scroll;
+        }
+    },
+    scrollCursor(state) {
+        return Math.min(state.scrollCursor, Math.max(state.scrollItemCount - 1, 0));
     }
 };
+// =========== State Util Functions ===========
 function setOldState(state) {
     state[exports.OldStateSymbol] = utils_1.deepCopy(state);
 }
@@ -82,10 +104,24 @@ function getOldState(state) {
 }
 exports.getOldState = getOldState;
 function update(state, newState) {
-    const view = state[exports.ViewUpdatesSymbol];
+    const view = state[exports.ViewUpdatesSymbol] || (state[exports.ViewUpdatesSymbol] = { updates: [] });
     view.updates.push(newState);
 }
 exports.update = update;
+function applyUpdates(state) {
+    const view = state[exports.ViewUpdatesSymbol];
+    if (view && view.updates.length) {
+        for (const update of view.updates) {
+            Object.assign(state, update);
+        }
+        view.updates = [];
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+exports.applyUpdates = applyUpdates;
 // Dummy class to expose the state structure to TypeScript type system
 class StateStub {
     constructor() {

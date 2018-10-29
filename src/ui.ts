@@ -1,4 +1,4 @@
-import {State, computedState, setOldState} from "./state";
+import {State, computedState, setOldState, applyUpdates} from "./state";
 import {pane, Pane} from "./ui/pane";
 import {render, diffPanes} from "./ui/render-pane";
 import {window} from "./ui/window";
@@ -14,10 +14,10 @@ const positionCursor   = (col: number, row: number) => `\u001b[${ row };${ col }
 
 export
 class UI {
-  active = false;
-  lastPane: Pane = null;
-  lastCols: number = 0;
-  lastRows: number = 0;
+  public active = false;
+  public lastPane: Pane = null;
+  private updateRecursion: number = 0;
+  private maxUpdateRecursion: number = 6;
 
   constructor(
     public stdin: NodeJS.ReadStream,
@@ -46,6 +46,10 @@ class UI {
     const cols = this.stdout.columns;
     const rows = this.stdout.rows;
 
+    // Update state cols/rows
+    state.viewCols = cols;
+    state.viewRows = rows;
+
     // Build panes
     const tp = performance.now();
     const panes = window(state, cols, rows);
@@ -68,22 +72,30 @@ class UI {
     const newBuffer = render(panes, cols, rows).canvas.join("\n");
     const tr2 = performance.now();
 
-    // Reset screen
-    this.stdout.write(positionCursor(1, 1));
+    if (this.updateRecursion < this.maxUpdateRecursion && applyUpdates(state)) {
+      // Render again to reflect new updates
+      this.updateRecursion++;
+      this.render(state);
+    } else {
+      // No updates, finish writing new buffer screen
+      // Reset screen
+      this.stdout.write(positionCursor(1, 1));
 
-    // Write new screen
-    this.stdout.write(newBuffer);
+      // Write new screen
+      this.stdout.write(newBuffer);
 
-    // Save paint performance
-    state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
-    state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
+      // Save paint performance
+      state.lastPaintDuration = Math.floor((tr2 - tr) * 100) / 100;
+      state.lastPaneBuildDuration = Math.floor((tp2 - tp) * 100) / 100;
 
-    if (td !== undefined) {
-      state.lastPaneDiffDuration = Math.floor((td2 - td) * 100) / 100;
+      if (td !== undefined) {
+        state.lastPaneDiffDuration = Math.floor((td2 - td) * 100) / 100;
+      }
+
+      // Save lastPane
+      this.lastPane = panes;
+      this.updateRecursion = 0;
     }
-
-    // Save lastPane
-    this.lastPane = panes;
   }
 
   update(state: State, input: number | string, fullInput: string) {
@@ -94,10 +106,10 @@ class UI {
       // Escape sequence
       switch (input) {
         case 65: // Up arrow
-          state.scroll = Math.max(state.scroll - 2, 0);
+          state.scrollCursor = Math.max(state.scrollCursor - 1, 0);
           break;
         case 66: // Down arrow
-          state.scroll += 2;
+          state.scrollCursor = Math.max(Math.min(state.scrollCursor + 1, state.scrollItemCount - 1), 0);
           break;
         case 68: // Left arrow
           state.scrollbarWidth++;
@@ -124,12 +136,13 @@ class UI {
           ];
 
           state.tasks.push(<any> {
+            provider: ["9anime", "gogoanime", "animerush"][Math.floor(Math.random() * 3)],
             list: [
               {status: MediaStatus.ACTIVE},
               {status: MediaStatus.ACTIVE},
               {status: MediaStatus.ACTIVE},
-              {status: MediaStatus.ACTIVE},
-              {status: MediaStatus.ACTIVE},
+              // {status: MediaStatus.ACTIVE},
+              // {status: MediaStatus.ACTIVE},
             ],
             id: state.tasks.length + 1,
             currentDl: Math.round(Math.random() * 100),

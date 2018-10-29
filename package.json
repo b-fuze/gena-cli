@@ -2,9 +2,9 @@
   "name": "gena-cli",
   "version": "0.0.1",
   "dependencies": {
-    "minimist": "^1.2.0",
-    "turbocolor": "^2.4.4",
-    "ansi.js": "0.0.5"
+    "ansi.js": "0.0.5",
+    "colorette": "^1.0.7",
+    "minimist": "^1.2.0"
   },
   "devDependencies": {
     "@types/minimist": "^1.2.0",

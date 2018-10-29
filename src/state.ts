@@ -30,6 +30,7 @@ export const state = {
   view: <FocusedView> "tasklist",
   header: <HeaderState> "main",
   footer: <FooterState> "listtips",
+  isDebug: false,
 
   confirmText: "Are you sure?",
   inputText: "",
@@ -41,6 +42,7 @@ export const state = {
   scrollbarMinHeight: 2,
   scrollbarWidth: 1,
   scrollPaneHeight: 0,
+  scrollMax: 0,
   scrollItemCount: 0,
 
   selectedTask: 0,
@@ -63,6 +65,10 @@ export const state = {
   // Computed
   activeMedia: 0,
 
+  // View meta
+  viewCols: 0,
+  viewRows: 0,
+
   // View reference
   [ViewUpdatesSymbol]: <ViewUpdates> null,
   [OldStateSymbol]: <any> null,
@@ -83,8 +89,27 @@ export const computedState: {
     }
 
     return active;
+  },
+
+  scroll(state: State) {
+    const min = Math.min(state.scrollCursor - state.scrollPaneHeight + 1, Math.max(state.scrollItemCount - state.scrollPaneHeight, 0));
+    const max = Math.max(state.scrollCursor - 1, 0);
+
+    if (state.scroll < min) {
+      return min;
+    } else if (state.scroll > max) {
+      return max;
+    } else {
+      return state.scroll;
+    }
+  },
+
+  scrollCursor(state: State) {
+    return Math.min(state.scrollCursor, Math.max(state.scrollItemCount - 1, 0));
   }
 };
+
+// =========== State Util Functions ===========
 
 export function setOldState(state: State) {
   state[OldStateSymbol] = deepCopy(state);
@@ -95,8 +120,23 @@ export function getOldState(state: State) {
 }
 
 export function update(state: State, newState: PartialState) {
-  const view = state[ViewUpdatesSymbol];
+  const view = state[ViewUpdatesSymbol] || (state[ViewUpdatesSymbol] = {updates: []});
   view.updates.push(newState);
+}
+
+export function applyUpdates(state: State) {
+  const view = state[ViewUpdatesSymbol];
+
+  if (view && view.updates.length) {
+    for (const update of view.updates) {
+      Object.assign(state, update);
+    }
+
+    view.updates = [];
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // Dummy class to expose the state structure to TypeScript type system
